@@ -48,7 +48,6 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 </style></head>
 <body><div class="wrap">
 <h1>Fan Diagnostic Assistant</h1>
-<div class="sub">5,000 seed cases · optimized candidate indexing · structured symptom scoring · cached tokens · text similarity · adaptive feedback</div>
 
 <div class="grid">
 <section class="card">
@@ -90,7 +89,7 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 <div class="actions"><button id="loadHistory" class="primary">Load selected</button><button id="newSearch">New search</button></div>
 </div>
 </div>
-<div class="actions"><button id="deleteHistory">Delete selected</button><button id="exportHistory">Export history JSON</button></div>
+<div class="actions"><button id="deleteHistory">Delete selected</button></div>
 <div id="historyStatus" class="small" style="margin-top:8px">Enter a number from 1 to 50 before Analyze to save or update that case.</div>
 </section>
 
@@ -104,18 +103,6 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 <div id="status" class="small" style="margin-top:8px">Only use this when the actual cause is known.</div>
 </section>
 
-<section class="card full">
-<h2>Dataset / local learning</h2>
-<div class="metrics">
-<div class="metric"><span class="small">Seed cases</span><b>5,000</b></div>
-<div class="metric"><span class="small">Centrifugal</span><b>3,000</b></div>
-<div class="metric"><span class="small">Axial</span><b>1,300</b></div>
-<div class="metric"><span class="small">Common</span><b>700</b></div>
-<div class="metric"><span class="small">Learned</span><b id="learned">0</b></div>
-</div>
-<div class="actions"><button id="export">Export learned cases JSON</button><button id="clear">Clear learned feedback</button></div>
-<div class="small" style="margin-top:8px">Runs locally in the browser. No server, GitHub, API, or internet connection is required.</div>
-</section>
 </div></div>
 
 <script>
@@ -323,7 +310,6 @@ function confirmLearn(){
  if(predicted!==actual) WEIGHTS[predicted]=(WEIGHTS[predicted]||0)-1;
  localStorage.setItem("fan5000_feedback",JSON.stringify(FEEDBACK));
  localStorage.setItem("fan5000_weights",JSON.stringify(WEIGHTS));
- $("learned").textContent=FEEDBACK.length;
  $("terms").value="";
  $("status").textContent=predicted===actual
    ? "Saved. The top prediction matched the confirmed cause."
@@ -334,7 +320,6 @@ function confirmLearn(){
 $("analyze").onclick=()=>analyze(true);
 $("confirm").onclick=confirmLearn;
 $("reset").onclick=()=>{setInputs({});$("caseNo").value="";LAST=null;$("results").textContent="Enter known information and click Analyze.";$("speed").textContent="";};
-$("learned").textContent=FEEDBACK.length;
 renderHistory();
 
 $("loadHistory").onclick=()=>{
@@ -354,22 +339,6 @@ $("deleteHistory").onclick=()=>{
  localStorage.setItem("fan5000_history",JSON.stringify(HISTORY));renderHistory();
  if(Number($("caseNo").value)===caseNo)$("caseNo").value="";
  $("historyStatus").textContent=`Case No. ${caseNo} deleted.`;
-};
-$("exportHistory").onclick=()=>{
- const b=new Blob([JSON.stringify(HISTORY,null,2)],{type:"application/json"});
- const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="fan5000_search_history.json";a.click();URL.revokeObjectURL(u);
-};
-
-$("export").onclick=()=>{
- const b=new Blob([JSON.stringify({feedback:FEEDBACK,weights:WEIGHTS},null,2)],{type:"application/json"});
- const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="fan5000_learned_cases.json";a.click();URL.revokeObjectURL(u);
-};
-$("clear").onclick=()=>{
- if(confirm("Delete all locally learned feedback?")){
-   FEEDBACK=[];WEIGHTS={};
-   localStorage.removeItem("fan5000_feedback");localStorage.removeItem("fan5000_weights");
-   $("learned").textContent="0";$("status").textContent="Learned feedback cleared.";
- }
 };
 </script>
 </body></html>
