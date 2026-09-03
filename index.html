@@ -26,6 +26,7 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
  .grid{grid-template-columns:1fr;gap:12px;margin-top:12px}
  .card{border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
  .fields{grid-template-columns:1fr;gap:12px}
+ .choice-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
  label{font-size:14px}
  select,input,textarea{min-height:48px;font-size:16px;padding:12px}
  textarea{min-height:112px}
@@ -52,7 +53,7 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 <div class="grid">
 <section class="card">
 <h2>1. Fan configuration</h2>
-<div class="fields">
+<div class="fields choice-grid">
 <label>Fan design<select id="design"><option value="unknown">Unknown</option><option value="centrifugal">Centrifugal</option><option value="axial">Axial</option></select></label>
 <label>Service<select id="service"><option value="unknown">Unknown</option><option>ID</option><option>FD</option><option>PA</option><option>baghouse</option><option>process exhaust</option><option>general process</option><option>kiln</option><option>cooler</option><option>gas handling</option></select></label>
 <label id="subLabel">Subtype<select id="subtype"><option value="unknown">Unknown</option></select></label>
@@ -60,7 +61,7 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 </div>
 
 <h2 style="margin-top:17px">2. Symptoms</h2>
-<div class="fields">
+<div class="fields choice-grid">
 <label>Flow<select id="flow"><option value="unknown">Unknown</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
 <label>Pressure<select id="pressure"><option value="unknown">Unknown</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
 <label>RPM<select id="rpm"><option value="unknown">Unknown</option><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></label>
@@ -68,9 +69,9 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 <label>Vibration<select id="vibration"><option value="unknown">Unknown</option><option value="normal">Normal</option><option value="high">High</option></select></label>
 <label>Noise<select id="noise"><option value="unknown">Unknown</option><option value="normal">Normal</option><option value="high">High / abnormal</option></select></label>
 <label>Damper<select id="damper"><option value="unknown">Unknown</option><option value="open">Fully open</option><option value="partial">Partially closed</option></select></label>
+<label>Case No.<select id="caseNo"><option value="">Do not save</option></select></label>
 </div>
 <label style="display:block;margin-top:10px">Observations / keywords<textarea id="notes" placeholder="e.g. flow down after duct modification, vibration increased after shutdown, elbow close to inlet..."></textarea></label>
-<label style="display:block;margin-top:10px">Save as case number (optional)<input id="caseNo" type="number" min="1" max="50" inputmode="numeric" placeholder="Leave blank to not save"></label>
 <div class="actions"><button id="analyze" class="primary">Analyze</button><button id="reset">Reset</button></div>
 <div id="speed" class="small" style="margin-top:8px"></div>
 </section>
@@ -154,6 +155,7 @@ function setSubtype(){
 $("design").onchange=setSubtype; setSubtype();
 
 $("actual").innerHTML=CAUSES.map(c=>`<option value="${c.id}">${c.name}</option>`).join("");
+$("caseNo").innerHTML='<option value="">Do not save</option>'+Array.from({length:50},(_,i)=>`<option value="${i+1}">Case ${i+1}</option>`).join("");
 
 function input(){
  return {
