@@ -5,20 +5,45 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fan Diagnostic Assistant 5000</title>
 <style>
-:root{--bg:#f5f6f8;--panel:#fff;--text:#17202a;--muted:#667085;--line:#d8dee8;--accent:#2f5d8a;--soft:#edf3f8;}
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
-.wrap{max-width:1180px;margin:auto;padding:16px}h1{font-size:24px;margin:0 0 4px}h2{font-size:17px;margin:0 0 12px}
+:root{--bg:#f5f6f8;--panel:#fff;--text:#17202a;--muted:#667085;--line:#d8dee8;--accent:#2f5d8a;--accent-dark:#24496d;--soft:#edf3f8;}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
+.wrap{max-width:1180px;margin:auto;padding:16px max(16px,env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}h1{font-size:24px;line-height:1.2;margin:0 0 4px}h2{font-size:17px;margin:0 0 12px}
 .sub,.small{font-size:13px;color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}label{font-size:13px;font-weight:600}
-select,input,textarea{width:100%;margin-top:5px;padding:9px;border:1px solid var(--line);border-radius:8px;background:white;font-size:15px}
-textarea{min-height:82px;resize:vertical}button{padding:10px 13px;border-radius:8px;border:1px solid var(--line);background:white;font-weight:600;cursor:pointer}
-button.primary{background:var(--accent);color:white;border-color:var(--accent)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+select,input,textarea{width:100%;margin-top:5px;padding:10px;border:1px solid var(--line);border-radius:8px;background:white;color:var(--text);font:inherit;font-size:15px}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:3px solid rgba(47,93,138,.2);outline-offset:1px;border-color:var(--accent)}
+textarea{min-height:96px;resize:vertical}button{min-height:44px;padding:10px 13px;border-radius:8px;border:1px solid var(--line);background:white;color:var(--text);font:inherit;font-weight:600;cursor:pointer;touch-action:manipulation}
+button.primary{background:var(--accent);color:white;border-color:var(--accent)}button.primary:active{background:var(--accent-dark)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .full{grid-column:1/-1}.result{border:1px solid var(--line);border-radius:9px;padding:11px;margin:8px 0}
-.row{display:flex;justify-content:space-between;gap:10px}.score,.tag{display:inline-block;background:var(--soft);padding:4px 7px;border-radius:999px;font-size:11px;margin:5px 3px 0 0}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.score,.tag{display:inline-block;background:var(--soft);padding:4px 7px;border-radius:999px;font-size:12px;line-height:1.35;margin:5px 3px 0 0}.score{white-space:nowrap}
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.metric{border:1px solid var(--line);border-radius:8px;padding:9px}
 .metric b{display:block;font-size:20px;margin-top:2px}.good{font-weight:700}.warn{font-weight:700}.muted{opacity:.42}
-@media(max-width:800px){.grid{grid-template-columns:1fr}.fields,.metrics{grid-template-columns:1fr}.full{grid-column:auto}}
+@media(max-width:800px){
+ body{background:#fff}
+ .wrap{padding:14px max(12px,env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+ h1{font-size:22px}.sub{font-size:13px;line-height:1.4}
+ .grid{grid-template-columns:1fr;gap:12px;margin-top:12px}
+ .card{border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(16,24,40,.06)}
+ .fields{grid-template-columns:1fr;gap:12px}
+ label{font-size:14px}
+ select,input,textarea{min-height:48px;font-size:16px;padding:12px}
+ textarea{min-height:112px}
+ .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .actions button{width:100%;min-height:48px}
+ .result{padding:12px;margin:10px 0}
+ .row{flex-wrap:wrap}.row b{flex:1 1 220px}
+ .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .metric{min-width:0}.metric b{font-size:19px}
+ .full{grid-column:auto}
+}
+@media(max-width:420px){
+ .wrap{padding-left:10px;padding-right:10px}
+ .card{padding:12px}
+ .actions{grid-template-columns:1fr}
+ .metrics{gap:6px}
+ .metric{padding:8px}
+}
 </style></head>
 <body><div class="wrap">
 <h1>Fan Diagnostic Assistant</h1>
