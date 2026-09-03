@@ -89,7 +89,7 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 <div class="actions"><button id="loadHistory" class="primary">Load selected</button><button id="newSearch">New search</button></div>
 </div>
 </div>
-<div class="actions"><button id="deleteHistory">Delete selected</button></div>
+<div class="actions"><button id="deleteHistory">Delete selected</button><button id="exportHistory">Export history JSON</button></div>
 <div id="historyStatus" class="small" style="margin-top:8px">Enter a number from 1 to 50 before Analyze to save or update that case.</div>
 </section>
 
@@ -339,6 +339,10 @@ $("deleteHistory").onclick=()=>{
  localStorage.setItem("fan5000_history",JSON.stringify(HISTORY));renderHistory();
  if(Number($("caseNo").value)===caseNo)$("caseNo").value="";
  $("historyStatus").textContent=`Case No. ${caseNo} deleted.`;
+};
+$("exportHistory").onclick=()=>{
+ const b=new Blob([JSON.stringify(HISTORY,null,2)],{type:"application/json"});
+ const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="fan5000_search_history.json";a.click();URL.revokeObjectURL(u);
 };
 </script>
 </body></html>
