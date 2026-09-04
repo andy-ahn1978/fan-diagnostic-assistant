@@ -21,6 +21,10 @@ Open `index.html` in a modern browser. No server, API, or internet connection is
 - Each cause explains the supporting evidence and any contradictory evidence actually used by the scoring rules.
 - **Recommended Checks** expand beneath each cause and help technicians confirm or rule it out. Checks are guidance only and do not trigger re-ranking in this version.
 
+## Observation intelligence
+
+The free-text **Observations / keywords** field contributes structured diagnostic evidence in addition to text similarity. The local parser recognizes bearing temperature and location, gradual development, shutdown or maintenance timing, impeller cleaning, production increases, full-speed operation, inlet geometry, and duct-change statements. Recognized signals affect scoring and appear in **Why it matches** or **Against**. Negated statements such as `No recent duct modification` are not treated as positive duct-change evidence.
+
 ## Ranking safeguards
 
 The final ranking combines seed-case similarity with direct diagnostic evidence, equipment/service compatibility, adaptive learning, and contradiction penalties. Physical and service constraints can override misleading synthetic-seed matches—for example, a PA fan strongly suppresses a plugged-baghouse hypothesis, while baghouse service supports it.
@@ -31,7 +35,7 @@ Overlapping outlet and downstream obstruction categories are combined as **Downs
 
 ## Regression checks
 
-Six built-in checks run when the page loads and are available from `runFanRegressionTests()` in the browser console:
+Nine built-in checks run when the page loads and are available from `runFanRegressionTests()` in the browser console:
 
 - low flow + high pressure + normal RPM → restriction family;
 - low flow + low pressure + low RPM → speed/drive;
@@ -39,6 +43,9 @@ Six built-in checks run when the page loads and are available from `runFanRegres
 - adjustable-pitch axial + low flow + normal RPM → blade pitch/control;
 - dirty ID service + gradually increasing vibration → buildup/imbalance;
 - otherwise healthy fan + elbow immediately at inlet → system effect.
+- rising bearing temperature + DE-bearing vibration → bearing/alignment;
+- issue immediately after shutdown maintenance + impeller cleaning → installation/imbalance;
+- increased production + fan already at full speed → insufficient capacity.
 
 ## Local learning
 

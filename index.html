@@ -318,8 +318,27 @@ function serviceCompatibility(id,x){
  return adjustment;
 }
 
+function observationSignals(notes){
+ const text=notes.toLowerCase().replace(/[’]/g,"'");
+ const noDuctModification=/\b(?:no|without)\b[^.]{0,30}\bduct (?:change|modification|work)\b/.test(text);
+ return {
+   bearingTemperature:/\bbearing\b[^.]{0,30}\b(?:temperature|temp|hot|overheat)/.test(text)||/\b(?:temperature|temp)\b[^.]{0,20}\bbearing\b/.test(text),
+   bearingLocation:/\b(?:de|nde|drive end|non[- ]drive end)\b[^.]{0,20}\bbearing\b|\bbearing\b[^.]{0,20}\b(?:de|nde|drive end|non[- ]drive end)\b/.test(text),
+   afterShutdown:/\bafter (?:a )?shutdown\b|\bfollowing (?:a )?shutdown\b/.test(text),
+   afterMaintenance:/\b(?:immediately|right|shortly)?\s*(?:after|following)\b[^.]{0,25}\b(?:maintenance|overhaul|repair|installation|rewir)/.test(text),
+   gradual:/\bgradual(?:ly)?\b|\bover (?:several )?(?:days|weeks|months)\b|\bprogressive(?:ly)?\b/.test(text),
+   impellerCleaned:/\b(?:impeller|wheel|blade)\b[^.]{0,30}\bclean(?:ed|ing)?\b|\bclean(?:ed|ing)?\b[^.]{0,30}\b(?:impeller|wheel|blade)\b/.test(text),
+   productionIncrease:/\bproduction\b[^.]{0,30}\b(?:increase|increased|higher|up|rise|rose)\b|\b(?:increase|increased|higher)\b[^.]{0,20}\bproduction\b/.test(text),
+   fullSpeed:/\b(?:full|maximum|max) (?:fan )?speed\b|\brunning at (?:full|maximum|max)\b/.test(text),
+   inletGeometry:/\belbow\b[^.]{0,35}\binlet\b|\binlet\b[^.]{0,35}\belbow\b|\binlet swirl\b|\bnonuniform (?:inlet )?flow\b|\bpoor inlet box\b/.test(text),
+   noDuctModification,
+   ductChange:!noDuctModification&&/\bduct\b[^.]{0,30}\b(?:change|changed|modification|modified|work)\b/.test(text)
+ };
+}
+
 function evidenceAdjustment(id,x){
  const notes=x.notes.toLowerCase();
+ const obs=observationSignals(x.notes);
  let adjustment=0;
  const restrictionPattern=x.flow==="low"&&x.pressure==="high";
   if(restrictionPattern){
@@ -329,7 +348,9 @@ function evidenceAdjustment(id,x){
    if(id==="unstable_region"||id==="leakage"||id==="recirculation")adjustment-=0.16;
  }
  if(id==="plugged_filter"&&/plugged|filter|baghouse|differential pressure|dust buildup/.test(notes))adjustment+=0.1;
- if(id==="duct_obstruction"&&/duct|downstream|outlet|discharge|heat exchanger|silencer/.test(notes))adjustment+=0.08;
+ if(id==="duct_obstruction"&&/downstream|outlet|discharge|heat exchanger|silencer/.test(notes))adjustment+=0.08;
+ if(id==="duct_obstruction"&&obs.ductChange)adjustment+=0.08;
+ if(id==="duct_obstruction"&&obs.noDuctModification)adjustment-=0.03;
  if(id==="speed_drive"&&x.rpm==="low")adjustment+=0.34;
  if(id==="speed_drive"&&x.flow==="low"&&x.pressure==="low")adjustment+=0.1;
  if(id==="blade_pitch"&&x.design==="axial"&&/adjustable pitch|variable pitch/.test(x.subtype))adjustment+=0.35;
@@ -346,6 +367,18 @@ function evidenceAdjustment(id,x){
  if(id==="blade_buildup"&&/dirty|dust|buildup|fouling|deposit/.test(notes))adjustment+=0.25;
  if(id==="imbalance"&&/imbalance|unbalance|gradual vibration|vibration increased/.test(notes))adjustment+=0.22;
  if(id==="system_effect"&&/elbow|inlet swirl|nonuniform|flow distortion|inlet box/.test(notes))adjustment+=0.7;
+ if(obs.bearingTemperature&&id==="bearing_alignment")adjustment+=0.22;
+ if(obs.bearingLocation&&id==="bearing_alignment")adjustment+=0.08;
+ if(obs.afterShutdown&&["wrong_rotation","bearing_alignment","imbalance","blade_pitch"].includes(id))adjustment+=0.08;
+ if(obs.afterMaintenance&&["wrong_rotation","bearing_alignment","imbalance","blade_pitch"].includes(id))adjustment+=0.14;
+ if(obs.gradual&&id==="blade_buildup")adjustment+=0.16;
+ if(obs.gradual&&["blade_damage","bearing_alignment"].includes(id))adjustment+=0.1;
+ if(obs.impellerCleaned&&["imbalance","blade_damage","wrong_rotation"].includes(id))adjustment+=0.12;
+ if(obs.impellerCleaned&&id==="blade_buildup")adjustment-=0.08;
+ if(obs.productionIncrease&&id==="undersized")adjustment+=0.3;
+ if(obs.productionIncrease&&id==="motor_overload")adjustment+=0.08;
+ if(obs.fullSpeed&&id==="undersized")adjustment+=0.2;
+ if(obs.fullSpeed&&id==="speed_drive")adjustment-=0.18;
  return adjustment;
 }
 
@@ -371,6 +404,7 @@ function confidenceLevel(score){return score>=.75?"High":score>=.55?"Moderate":"
 
 function evidenceFor(id,x){
  const supporting=[],against=[],add=(list,condition,label)=>{if(condition)list.push(label)};
+ const obs=observationSignals(x.notes);
  add(supporting,x.rpm==="low"&&id==="speed_drive","Low RPM");
  add(against,x.rpm==="normal"&&id==="speed_drive","RPM normal");
  add(supporting,x.flow==="low"&&["speed_drive","duct_obstruction","inlet_blockage","blade_pitch","blade_buildup","undersized"].includes(id),"Low flow");
@@ -390,7 +424,19 @@ function evidenceFor(id,x){
  add(supporting,id==="blade_buildup"&&/dirty|dust|buildup|fouling|deposit/.test(notes),"Buildup/fouling observation");
  add(supporting,id==="measurement"&&/sensor|instrument|calibrat|pressure tap|scaling|reading inconsistent/.test(notes),"Measurement concern reported");
  add(supporting,id==="measurement"&&x.flow==="low"&&x.pressure==="high"&&x.rpm==="low"&&x.current==="high","Conflicting performance indicators");
- add(supporting,id==="duct_obstruction"&&/duct|downstream|outlet|discharge|heat exchanger|silencer/.test(notes),"Downstream restriction observation");
+ add(supporting,id==="duct_obstruction"&&(/downstream|outlet|discharge|heat exchanger|silencer/.test(notes)||obs.ductChange),obs.ductChange?"Recent duct change":"Downstream restriction observation");
+ add(against,id==="duct_obstruction"&&obs.noDuctModification,"No recent duct modification");
+ add(supporting,id==="bearing_alignment"&&obs.bearingTemperature,"Bearing temperature increased");
+ add(supporting,id==="bearing_alignment"&&obs.bearingLocation,"Bearing location identified");
+ add(supporting,["wrong_rotation","bearing_alignment","imbalance","blade_pitch"].includes(id)&&obs.afterShutdown,"Problem started after shutdown");
+ add(supporting,["wrong_rotation","bearing_alignment","imbalance","blade_pitch"].includes(id)&&obs.afterMaintenance,"Problem started after maintenance");
+ add(supporting,id==="blade_buildup"&&obs.gradual,"Condition increased gradually");
+ add(supporting,["blade_damage","bearing_alignment"].includes(id)&&obs.gradual,"Condition increased gradually");
+ add(supporting,["imbalance","blade_damage","wrong_rotation"].includes(id)&&obs.impellerCleaned,"Impeller cleaned during maintenance");
+ add(against,id==="blade_buildup"&&obs.impellerCleaned,"Impeller recently cleaned");
+ add(supporting,id==="undersized"&&obs.productionIncrease,"Production demand increased");
+ add(supporting,id==="undersized"&&obs.fullSpeed,"Fan already at full speed");
+ add(against,id==="speed_drive"&&obs.fullSpeed,"Fan reported at full speed");
  return {supporting,against};
 }
 
@@ -489,7 +535,10 @@ const REGRESSION_TESTS=[
  {id:"C",input:{flow:"normal",pressure:"normal",vibration:"high"},expected:["imbalance","bearing_alignment"]},
  {id:"D",input:{design:"axial",subtype:"adjustable pitch",flow:"low",rpm:"normal"},expected:["blade_pitch"]},
  {id:"E",input:{service:"ID",vibration:"high",notes:"dirty service with vibration increased gradually"},expected:["blade_buildup","imbalance"]},
- {id:"F",input:{flow:"normal",pressure:"normal",rpm:"normal",notes:"elbow immediately at inlet"},expected:["system_effect"]}
+ {id:"F",input:{flow:"normal",pressure:"normal",rpm:"normal",notes:"elbow immediately at inlet"},expected:["system_effect"]},
+ {id:"G",input:{vibration:"high",notes:"Bearing temperature increased gradually. Vibration is higher on DE bearing."},expected:["bearing_alignment"]},
+ {id:"H",input:{notes:"Problem started immediately after shutdown maintenance. Impeller was cleaned during shutdown."},expected:["imbalance","wrong_rotation"]},
+ {id:"I",input:{flow:"low",notes:"Production increased about 20%. Fan is already running at full speed."},expected:["undersized"]}
 ];
 function regressionInput(partial){
  return {design:"unknown",service:"unknown",subtype:"unknown",pclass:"unknown",flow:"unknown",pressure:"unknown",rpm:"unknown",current:"unknown",vibration:"unknown",noise:"unknown",damper:"unknown",notes:"",...partial};
