@@ -16,7 +16,7 @@ select:focus,input:focus,textarea:focus,button:focus-visible{outline:3px solid r
 textarea{min-height:96px;resize:vertical}button{min-height:44px;padding:10px 13px;border-radius:8px;border:1px solid var(--line);background:white;color:var(--text);font:inherit;font-weight:600;cursor:pointer;touch-action:manipulation}
 button.primary{background:var(--accent);color:white;border-color:var(--accent)}button.primary:active{background:var(--accent-dark)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .full{grid-column:1/-1}.result{border:1px solid var(--line);border-radius:9px;padding:11px;margin:8px 0}
-.pattern{background:var(--soft);border-color:#b7cadc;margin-bottom:14px}.section-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}.checks{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}.checks summary{cursor:pointer;font-weight:700;color:var(--accent);min-height:32px}.checks ul{margin:7px 0 2px;padding-left:21px}.checks li{margin:4px 0}.hypothesis{font-size:12px;color:var(--muted);margin-top:12px}
+.pattern{margin-bottom:10px}.pattern-1{background:#dcebf7;border:2px solid #4b7ea8}.pattern-2{background:#e9f2f9;border-color:#82a7c5}.pattern-3{background:#f3f7fb;border-color:#b7cadc}.cause-top{background:#f4f8fc;border:2px solid #6f98ba}.section-label{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}.evidence{font-size:13px;margin-top:9px;color:#344054}.evidence b{color:var(--text)}.against{color:#667085;margin-top:3px}.confidence{font-weight:700}.checks{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}.checks summary{cursor:pointer;font-weight:700;color:var(--accent);min-height:32px}.checks ul{margin:7px 0 2px;padding-left:21px}.checks li{margin:4px 0}.hypothesis{font-size:12px;color:var(--muted);margin-top:12px}
 .row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.score,.tag{display:inline-block;background:var(--soft);padding:4px 7px;border-radius:999px;font-size:12px;line-height:1.35;margin:5px 3px 0 0}.score{white-space:nowrap}
 .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.metric{border:1px solid var(--line);border-radius:8px;padding:9px}
 .metric b{display:block;font-size:20px;margin-top:2px}.good{font-weight:700}.warn{font-weight:700}.muted{opacity:.42}
@@ -117,7 +117,7 @@ const CHECKS={
  duct_obstruction:["Inspect the fan outlet and discharge duct.","Check downstream dampers, silencers, heat exchangers, and process equipment.","Measure static pressure before and after the suspected restriction.","Compare the pressure profile with the normal baseline.","Check for recent duct or process modifications."],
  damper:["Compare commanded and actual damper position.","Inspect the actuator and linkage.","Verify that the damper reaches the fully open position.","Check for mechanical binding."],
  inlet_blockage:["Inspect the inlet screen, cone, silencer, and nearby ductwork.","Measure static pressure across the suspected inlet restriction.","Check for foreign material or accumulated deposits.","Compare inlet conditions with the normal baseline."],
- speed_drive:["Compare commanded speed with measured shaft RPM.","Inspect belts, pulleys, coupling, and VFD status.","Check for slip under load.","Verify speed-instrument calibration."],
+ speed_drive:["Check the VFD or speed command and active drive alarms.","Compare commanded speed with measured shaft RPM.","Inspect belts, pulleys, and coupling, then check for slip under load.","Inspect the motor/drive and verify speed-instrument calibration."],
  blade_buildup:["Inspect the impeller for deposits and uneven fouling.","Compare vibration and power trends with baseline.","Check process conditions that could promote buildup.","Verify balance after cleaning."],
  blade_damage:["Inspect blades and impeller for erosion, cracks, corrosion, and tip wear.","Check vibration spectrum and recent trend.","Verify clearances and wheel condition.","Review recent foreign-object or process events."],
  imbalance:["Measure vibration amplitude and phase at both bearings.","Inspect for uneven buildup, missing balance weights, or rotor damage.","Check shaft runout and balance condition.","Compare vibration with the normal baseline."],
@@ -279,7 +279,7 @@ function specificCauseId(c){
  if(c.cause==="outlet_blockage")return "duct_obstruction";
  if(c.cause!=="system_resistance")return c.cause;
  const text=c.text.toLowerCase();
- if(/plugged baghouse|clogged filter/.test(text))return "plugged_filter";
+ if(/plugged baghouse|clogged filter/.test(text))return c.service==="baghouse"?"plugged_filter":null;
  return "duct_obstruction";
 }
 
@@ -311,6 +311,10 @@ function serviceCompatibility(id,x){
    if(["speed_drive","blade_pitch","duct_obstruction","inlet_blockage","blade_buildup","bearing_alignment","system_effect"].includes(id))adjustment+=0.06;
  }
  if(x.service==="baghouse"&&["blade_buildup","duct_obstruction","damper"].includes(id))adjustment+=0.05;
+ if(x.service==="ID"&&["blade_buildup","imbalance","leakage","system_effect","duct_obstruction"].includes(id))adjustment+=0.05;
+ if(x.service==="FD"&&["speed_drive","inlet_blockage","damper","system_effect"].includes(id))adjustment+=0.04;
+ if(x.service==="kiln"&&["blade_buildup","blade_damage","density_process","bearing_alignment"].includes(id))adjustment+=0.05;
+ if(x.service==="cooler"&&["system_effect","blade_buildup","parallel_fans","bearing_alignment"].includes(id))adjustment+=0.05;
  return adjustment;
 }
 
@@ -352,15 +356,42 @@ function diagnosticPatterns(x,ranked){
  }else if(x.flow==="low"&&x.pressure==="low"){
    patterns.push({name:"Insufficient fan output / reduced developed pressure",score:0.64+(x.rpm==="low"?0.12:0)+(x.current==="low"?0.05:0)});
  }
- if(x.rpm==="low")patterns.push({name:"Fan speed / drive / control abnormality also indicated",score:0.76});
- if(x.vibration==="high"||x.noise==="high")patterns.push({name:"Mechanical or aerodynamic condition also indicated",score:0.62+(x.vibration==="high"&&x.noise==="high"?0.1:0)});
- if(x.current==="high")patterns.push({name:"Elevated power demand also indicated",score:0.66});
+ if(x.rpm==="low")patterns.push({name:"Fan speed / drive / control abnormality",score:0.76});
+ if(x.vibration==="high"||x.noise==="high")patterns.push({name:"Mechanical / aerodynamic abnormality",score:0.62+(x.vibration==="high"&&x.noise==="high"?0.1:0)});
+ if(x.current==="high")patterns.push({name:"Elevated power demand",score:0.66});
  if(!patterns.length&&x.flow==="normal"&&x.pressure==="normal"&&x.rpm==="normal")patterns.push({name:"No clear performance deviation detected",score:0.72});
  if(!patterns.length&&ranked.length){
    const cls=ranked[0].problem_class;
    patterns.push({name:cls==="measurement"?"Measurement consistency issue suspected":`${cls[0].toUpperCase()+cls.slice(1)}-related issue suspected`,score:Math.max(0.5,ranked[0].score-0.04)});
  }
- return patterns.slice(0,3).map(p=>({...p,score:Math.min(.94,p.score)}));
+ return patterns.map(p=>({...p,score:Math.min(.94,p.score)})).filter(p=>p.score>=.6).sort((a,b)=>b.score-a.score).slice(0,3);
+}
+
+function confidenceLevel(score){return score>=.75?"High":score>=.55?"Moderate":"Low"}
+
+function evidenceFor(id,x){
+ const supporting=[],against=[],add=(list,condition,label)=>{if(condition)list.push(label)};
+ add(supporting,x.rpm==="low"&&id==="speed_drive","Low RPM");
+ add(against,x.rpm==="normal"&&id==="speed_drive","RPM normal");
+ add(supporting,x.flow==="low"&&["speed_drive","duct_obstruction","inlet_blockage","blade_pitch","blade_buildup","undersized"].includes(id),"Low flow");
+ add(supporting,x.pressure==="high"&&["duct_obstruction","inlet_blockage","damper","plugged_filter"].includes(id),"High pressure");
+ add(against,x.pressure==="high"&&id==="speed_drive","High pressure");
+ add(supporting,x.design==="axial"&&id==="blade_pitch","Axial fan");
+ add(supporting,/adjustable pitch|variable pitch/.test(x.subtype)&&id==="blade_pitch",`${x.subtype.replace(/\b\w/g,ch=>ch.toUpperCase())}`);
+ add(supporting,x.service==="baghouse"&&id==="plugged_filter","Baghouse service");
+ add(against,x.service!=="unknown"&&x.service!=="baghouse"&&id==="plugged_filter",`${x.service} service`);
+ add(supporting,x.damper==="open"&&id==="duct_obstruction","Damper fully open");
+ add(against,x.damper==="open"&&id==="damper","Damper fully open");
+ add(supporting,x.vibration==="high"&&["imbalance","bearing_alignment","blade_buildup","blade_damage","structural_resonance"].includes(id),"High vibration");
+ add(against,x.vibration==="normal"&&["imbalance","bearing_alignment","structural_resonance"].includes(id),"Vibration normal");
+ add(supporting,x.current==="high"&&["motor_overload","electrical"].includes(id),"High motor current");
+ const notes=x.notes.toLowerCase();
+ add(supporting,id==="system_effect"&&/elbow|inlet swirl|nonuniform|flow distortion|inlet box/.test(notes),"Inlet/outlet geometry evidence");
+ add(supporting,id==="blade_buildup"&&/dirty|dust|buildup|fouling|deposit/.test(notes),"Buildup/fouling observation");
+ add(supporting,id==="measurement"&&/sensor|instrument|calibrat|pressure tap|scaling|reading inconsistent/.test(notes),"Measurement concern reported");
+ add(supporting,id==="measurement"&&x.flow==="low"&&x.pressure==="high"&&x.rpm==="low"&&x.current==="high","Conflicting performance indicators");
+ add(supporting,id==="duct_obstruction"&&/duct|downstream|outlet|discharge|heat exchanger|silencer/.test(notes),"Downstream restriction observation");
+ return {supporting,against};
 }
 
 function rankInput(x,useLearning=true){
@@ -382,6 +413,7 @@ function rankInput(x,useLearning=true){
  for(const o of stage2){
    const c=PRE[o.i];
    const causeId=specificCauseId(c);
+   if(!causeId)continue;
    if(!agg[causeId])agg[causeId]=[];
    agg[causeId].push(o.preScore);
  }
@@ -394,7 +426,7 @@ function rankInput(x,useLearning=true){
    score-=contradictionPenalty(c.id,x);
    score=Math.max(0,Math.min(0.95,score));
    return {...c,score,caseScore,count:vals.length};
- }).sort((a,b)=>b.score-a.score).slice(0,7);
+ }).sort((a,b)=>b.score-a.score).slice(0,5);
  return {qTokens,ids,ranked};
 }
 
@@ -407,19 +439,18 @@ function analyze(saveSearch=true){
  $("actual").value=ranked[0].id;
  const patterns=diagnosticPatterns(x,ranked);
  $("results").innerHTML=`
-  <div class="section-label">1. Diagnostic Pattern</div>
-  ${patterns.map((pattern,i)=>`<div class="result pattern">
-   <div class="row"><b>${patterns.length>1?String.fromCharCode(65+i)+". ":""}${escapeHtml(pattern.name)}</b><span class="score">${Math.round(pattern.score*100)}%</span></div>
+  <div class="section-label">1. Diagnostic Patterns</div>
+  ${patterns.map((pattern,i)=>`<div class="result pattern pattern-${i+1}">
+   <div class="row"><b>#${i+1} ${escapeHtml(pattern.name)}</b><span class="score"><span class="confidence">${confidenceLevel(pattern.score)}</span> · ${Math.round(pattern.score*100)}%</span></div>
    <div class="small">Broad diagnostic direction — not a confirmed root cause.</div>
   </div>`).join("")}
-  <div class="section-label">2. Likely Specific Causes</div>`+ranked.map((c,i)=>`
-  <div class="result">
-   <div class="row"><b>#${i+1} ${escapeHtml(c.name)}</b><span class="score">${Math.round(c.score*100)}%</span></div>
-   <span class="tag">${c.problem_class}</span>
-   <span class="tag">case match ${Math.round(c.caseScore*100)}%</span>
-   <span class="tag">${c.count} strong matches</span>
+  <div class="section-label">2. Likely Specific Causes</div>`+ranked.map((c,i)=>{const evidence=evidenceFor(c.id,x);return `
+  <div class="result ${i===0?"cause-top":""}">
+   <div class="row"><b>#${i+1} ${escapeHtml(c.name)}</b><span class="score"><span class="confidence">${confidenceLevel(c.score)}</span> · ${Math.round(c.score*100)}%</span></div>
+   ${evidence.supporting.length?`<div class="evidence"><b>Why it matches:</b> ${evidence.supporting.map(escapeHtml).join(" · ")}</div>`:""}
+   ${evidence.against.length?`<div class="evidence against"><b>Against:</b> ${evidence.against.map(escapeHtml).join(" · ")}</div>`:""}
    <details class="checks"><summary>Recommended checks</summary><ul>${(CHECKS[c.id]||DEFAULT_CHECKS).map(check=>`<li>${escapeHtml(check)}</li>`).join("")}</ul></details>
-  </div>`).join("")+`<div class="hypothesis">Scores rank hypotheses only. Confirm the actual cause with field checks before corrective action.</div>`;
+  </div>`}).join("")+`<div class="hypothesis">Percentages are diagnostic confidence scores, not statistical failure probabilities. Confirm the actual cause with field checks before corrective action.</div>`;
 
  const ms=performance.now()-t0;
  $("speed").textContent=`Candidates ${ids.length.toLocaleString()} → 400 → 80; analysis time ${ms.toFixed(1)} ms on this device.`;

@@ -16,12 +16,16 @@ Open `index.html` in a modern browser. No server, API, or internet connection is
 ## Diagnostic workflow
 
 - **Diagnostic Pattern** describes the broad direction of the evidence and is not presented as a root cause.
-- **Likely Specific Causes** ranks concrete hypotheses with stronger penalties for contradictory evidence.
+- Up to three patterns are shown in confidence order with blue priority emphasis.
+- **Likely Specific Causes** shows the top five concrete hypotheses with stronger penalties for contradictory evidence.
+- Each cause explains the supporting evidence and any contradictory evidence actually used by the scoring rules.
 - **Recommended Checks** expand beneath each cause and help technicians confirm or rule it out. Checks are guidance only and do not trigger re-ranking in this version.
 
 ## Ranking safeguards
 
 The final ranking combines seed-case similarity with direct diagnostic evidence, equipment/service compatibility, adaptive learning, and contradiction penalties. Physical and service constraints can override misleading synthetic-seed matches—for example, a PA fan strongly suppresses a plugged-baghouse hypothesis, while baghouse service supports it.
+
+Known synthetic-seed contamination such as non-baghouse services paired with `plugged baghouse` is excluded from cause aggregation while preserving the full 5,000-case dataset for auditability. Displayed percentages are diagnostic confidence scores, not statistical failure probabilities.
 
 Overlapping outlet and downstream obstruction categories are combined as **Downstream / fan discharge restriction**.
 
