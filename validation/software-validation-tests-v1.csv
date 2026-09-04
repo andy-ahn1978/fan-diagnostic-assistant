@@ -1,0 +1,32 @@
+test_id,design,service,subtype,flow,pressure,rpm,current,vibration,noise,damper,observation,expected_pattern,expected_top_causes,forbidden_top_causes,status
+T001,centrifugal,ID,backward curved,low,high,normal,normal,normal,normal,open,,System restriction,"duct_obstruction|inlet_blockage",speed_drive,Ready
+T002,centrifugal,baghouse,airfoil,low,high,normal,normal,normal,normal,open,"High differential pressure across filter",System restriction,"plugged_filter|duct_obstruction",speed_drive,Ready
+T003,centrifugal,PA,radial,low,high,normal,normal,normal,normal,open,,System restriction,"duct_obstruction|inlet_blockage",plugged_filter,Ready
+T004,axial,PA,adjustable pitch,low,high,low,high,high,high,open,,Mixed restriction and drive/control,"speed_drive|duct_obstruction|blade_pitch",plugged_filter,Ready
+T005,centrifugal,general process,backward curved,low,low,low,low,normal,normal,open,,Insufficient fan output,speed_drive,"plugged_filter|damper",Ready
+T006,centrifugal,general process,belt drive,low,low,low,normal,high,high,open,"Belt squeal and dust",Drive/mechanical,"belt_tension|speed_drive",plugged_filter,Ready
+T007,axial,cooler,adjustable pitch,low,unknown,normal,normal,normal,normal,open,"Pitch actuator not reaching command",Control abnormality,blade_pitch,plugged_filter,Ready
+T008,centrifugal,ID,radial,low,unknown,normal,normal,high,high,open,"Dust buildup visible; vibration increased gradually",Mechanical/aerodynamic,"blade_buildup|imbalance",plugged_filter,Ready
+T009,centrifugal,general process,backward curved,normal,normal,normal,normal,high,normal,open,"Strong 1x running-speed vibration",Mechanical,imbalance,"plugged_filter|speed_drive",Ready
+T010,centrifugal,general process,backward curved,normal,normal,normal,normal,high,high,open,"Bearing temperature rising at DE",Mechanical,bearing_alignment,plugged_filter,Ready
+T011,centrifugal,general process,backward curved,normal,normal,normal,normal,high,high,open,"Base bolts loose",Mechanical,structural_resonance,plugged_filter,Ready
+T012,centrifugal,general process,backward curved,low,unknown,normal,normal,normal,high,open,"Elbow immediately at inlet",System effect,system_effect,plugged_filter,Ready
+T013,centrifugal,general process,backward curved,low,unknown,normal,normal,normal,normal,open,"Abrupt outlet elbow with no straight duct",System effect,system_effect,plugged_filter,Ready
+T014,centrifugal,general process,backward curved,low,high,normal,normal,normal,normal,partial,"Actual damper position 40%",System restriction,damper,speed_drive,Ready
+T015,centrifugal,general process,backward curved,low,high,normal,normal,normal,normal,open,"Command and actual damper fully open",System restriction,duct_obstruction,damper,Ready
+T016,centrifugal,general process,backward curved,low,low,normal,low,normal,normal,open,"Problem began immediately after motor rewiring",Insufficient fan output,wrong_rotation,plugged_filter,Ready
+T017,axial,general process,unknown,low,normal,normal,normal,high,high,open,"Pulsation at low load",Aerodynamic abnormality,unstable_region,plugged_filter,Ready
+T018,centrifugal,general process,backward curved,high,low,normal,high,normal,normal,open,,Low-resistance/high-flow,motor_overload,"plugged_filter|duct_obstruction",Ready
+T019,centrifugal,general process,backward curved,normal,high,normal,high,normal,normal,open,"Gas temperature dropped substantially",Process/density,density_process,plugged_filter,Ready
+T020,centrifugal,ID,backward curved,low,low,normal,normal,normal,normal,open,"Access door and expansion joint leaking",System leakage,leakage,plugged_filter,Ready
+T021,centrifugal,general process,backward curved,normal,normal,normal,normal,normal,high,partial,"Fan heavily throttled at normal production",Oversizing/control,oversized,plugged_filter,Ready
+T022,centrifugal,PA,radial,low,unknown,normal,high,normal,normal,open,"Production increased 20%; fan at full speed",Capacity limitation,undersized,plugged_filter,Ready
+T023,centrifugal,general process,backward curved,low,high,normal,normal,normal,normal,open,"Foreign material visible in inlet screen",System restriction,inlet_blockage,plugged_filter,Ready
+T024,centrifugal,general process,backward curved,unknown,unknown,normal,normal,high,high,open,"Two parallel fans alternately load and unload",Parallel interaction,parallel_fans,plugged_filter,Ready
+T025,centrifugal,general process,backward curved,low,unknown,normal,normal,normal,high,open,"Discharge air is returning to fan inlet",Recirculation,recirculation,plugged_filter,Ready
+T026,centrifugal,general process,backward curved,unknown,unknown,low,high,high,high,open,"Phase currents are unequal and VFD reports fault",Electrical/control,electrical,plugged_filter,Ready
+T027,centrifugal,general process,backward curved,high,low,normal,normal,normal,normal,open,"Pressure reading disagrees with independent gauge",Measurement inconsistency,measurement,plugged_filter,Ready
+T028,centrifugal,general process,backward curved,normal,normal,normal,normal,normal,normal,open,,No clear deviation,measurement,"plugged_filter|speed_drive",Ready
+T029,centrifugal,baghouse,backward curved,normal,normal,normal,normal,normal,normal,open,"Filter differential pressure normal",No clear restriction,measurement,plugged_filter,Ready
+T030,axial,PA,adjustable pitch,low,unknown,normal,normal,normal,normal,open,"Pitch verified correct; inlet elbow close to fan",System effect,system_effect,"blade_pitch|plugged_filter",Ready
+

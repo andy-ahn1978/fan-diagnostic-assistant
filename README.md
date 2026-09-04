@@ -75,6 +75,7 @@ Confirmed causes and adaptive weights are stored in the browser's `localStorage`
 
 - `index.html` — complete application, styling, diagnostic logic, and seed dataset
 - `README.md` — project information
+- `validation/` — independently reviewable 24-cause reference matrix and 30 software-validation test specifications
 
 ## Publishing
 
