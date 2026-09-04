@@ -13,6 +13,21 @@ Open `index.html` in a modern browser. No server, API, or internet connection is
 - 700 common cases
 - 24 non-overlapping specific diagnostic cause categories
 
+The 5,000 records are synthetic examples rather than field failure records. Their original contents are retained as a fixed baseline; cases that violate hard Rule Matrix compatibility constraints are quarantined from ranking.
+
+## Engineering Rule Matrix
+
+All 24 specific causes now have an embedded, machine-readable rule entry exposed as `window.FAN_DIAGNOSTIC_RULE_MATRIX`. Each entry records its diagnostic family, supporting measurements, contradictions, fan-design/service/subtype constraints, evidence level, and source metadata.
+
+Evidence levels are intentionally conservative:
+
+- **Supporting** — the relationship is supported by the stated AMCA scope publication or the U.S. DOE fan-systems sourcebook.
+- **Engineering** — a reviewable fan/rotating-equipment engineering rule that has not yet been traced to a licensed publication edition and page.
+
+No entry is labelled as a direct AMCA transcription or AMCA-validated rule. Licensed AMCA editions must be reviewed and page/section references added before promoting relationships to that status.
+
+The same matrix controls seed admission, service/design compatibility, structured evidence weighting, and contradiction penalties. Runtime audit totals are exposed as `window.FAN_SEED_AUDIT`.
+
 ## Diagnostic workflow
 
 - **Diagnostic Pattern** describes the broad direction of the evidence and is not presented as a root cause.
@@ -35,7 +50,7 @@ Overlapping outlet and downstream obstruction categories are combined as **Downs
 
 ## Regression checks
 
-Nine built-in checks run when the page loads and are available from `runFanRegressionTests()` in the browser console:
+Ten built-in checks run when the page loads and are available from `runFanRegressionTests()` in the browser console:
 
 - low flow + high pressure + normal RPM → restriction family;
 - low flow + low pressure + low RPM → speed/drive;
@@ -46,6 +61,11 @@ Nine built-in checks run when the page loads and are available from `runFanRegre
 - rising bearing temperature + DE-bearing vibration → bearing/alignment;
 - issue immediately after shutdown maintenance + impeller cleaning → installation/imbalance;
 - increased production + fan already at full speed → insufficient capacity.
+- axial adjustable-pitch PA fan with low flow, high pressure, low RPM, high current/vibration, and an open damper → speed/drive, restriction, or pitch/control; plugged filter is forbidden from the top three.
+
+## Technical basis and limitations
+
+Diagnostic rules were developed with reference to established fan-system troubleshooting principles, including AMCA Publications 201 and 202 and the U.S. DOE fan-systems sourcebook. Synthetic cases are generated examples and are not actual field case records. The application is not AMCA-certified and does not replace qualified engineering assessment.
 
 ## Local learning
 

@@ -104,6 +104,11 @@ button.primary{background:var(--accent);color:white;border-color:var(--accent)}b
 <div id="status" class="small" style="margin-top:8px">Only use this when the actual cause is known.</div>
 </section>
 
+<section class="card full">
+<h2>Technical basis</h2>
+<div class="small">Diagnostic rules are maintained in a source-traceable Engineering Rule Matrix and developed with reference to established fan-system troubleshooting principles, including AMCA Publications 201 and 202 and the U.S. DOE fan-systems sourcebook. The 5,000 synthetic cases are generated examples, not actual field records. This tool is not AMCA-certified and does not replace qualified engineering assessment.</div>
+</section>
+
 </div></div>
 
 <script>
@@ -112,6 +117,48 @@ const SEEDS=[{"id":1,"design":"centrifugal","service":"PA","subtype":"radial","p
 const SPECIFIC_CAUSES=[...CAUSES.filter(c=>c.id!=="system_resistance"&&c.id!=="outlet_blockage"),
  {id:"plugged_filter",name:"Plugged baghouse / filter",terms:["plugged baghouse","clogged filter","filter restriction","dust buildup"],problem_class:"system"},
  {id:"duct_obstruction",name:"Downstream / fan discharge restriction",terms:["fan outlet obstruction","duct blockage","fouled heat exchanger","closed isolation damper","process restriction"],problem_class:"system"}];
+
+// Source-traceable engineering knowledge layer. AMCA entries identify scope-level
+// references only; no rule is labelled as a direct AMCA transcription without a
+// licensed edition/page review. The matrix is the common basis for seed admission,
+// ranking compatibility, contradiction handling, and result explanations.
+const RULE_SOURCES={
+ engineering:{organization:"Engineering review",document:"Fan/rotating-equipment diagnostic heuristics",edition:"2026-09-03",level:"Engineering"},
+ doe:{organization:"U.S. Department of Energy",document:"Improving Fan System Performance: A Sourcebook for Industry",edition:"2003",level:"Supporting",url:"https://www.energy.gov/sites/default/files/2014/05/f16/fan_sourcebook.pdf"},
+ amca201:{organization:"AMCA International",document:"Publication 201-23, Fans and Systems",edition:"201-23",level:"Supporting",url:"https://www.amca.org/publish/"},
+ amca202:{organization:"AMCA International",document:"Publication 202-17, Troubleshooting",edition:"202-17 scope reference",level:"Supporting",url:"https://www.amca.org/publish/publications-and-standards/amca-publications/amca-publication-202-17-troubleshooting.html"}
+};
+const RULE_OVERRIDES={
+ speed_drive:{supports:{flow:["low"],pressure:["low"],rpm:["low"]},contradicts:{rpm:["normal","high"]},source:"doe"},
+ blade_buildup:{supports:{flow:["low"],vibration:["high"]},services:{prefer:["ID","baghouse","kiln","gas handling"]},source:"amca202"},
+ blade_damage:{supports:{flow:["low"],vibration:["high"],noise:["high"]},source:"amca202"},
+ imbalance:{supports:{vibration:["high"]},contradicts:{vibration:["normal"]},source:"amca202"},
+ bearing_alignment:{supports:{vibration:["high"],noise:["high"]},contradicts:{vibration:["normal"]},source:"amca202"},
+ system_effect:{supports:{flow:["low"]},source:"amca201"},
+ damper:{supports:{flow:["low"],pressure:["high"],damper:["partial","closed"]},contradicts:{damper:["open"],flow:["high"]},source:"amca202"},
+ wrong_rotation:{supports:{flow:["low"],pressure:["low"]},contradicts:{flow:["normal"],pressure:["normal"]},source:"amca202"},
+ unstable_region:{supports:{flow:["low"],vibration:["high"],noise:["high"]},source:"amca202"},
+ motor_overload:{supports:{current:["high"]},contradicts:{current:["low"]},source:"doe"},
+ density_process:{supports:{current:["high"]},source:"doe"},
+ leakage:{supports:{flow:["low"],pressure:["low"]},source:"doe"},
+ blade_pitch:{supports:{flow:["low"]},designs:{allow:["axial","unknown"]},subtypes:{prefer:["adjustable pitch","variable pitch"]},source:"amca202"},
+ oversized:{supports:{damper:["partial","closed"]},source:"doe"},
+ undersized:{supports:{flow:["low"]},source:"doe"},
+ inlet_blockage:{supports:{flow:["low"],pressure:["high"]},contradicts:{flow:["high"]},source:"amca202"},
+ structural_resonance:{supports:{vibration:["high"],noise:["high"]},contradicts:{vibration:["normal"]},source:"amca202"},
+ measurement:{source:"engineering"},
+ parallel_fans:{supports:{vibration:["high"],noise:["high"]},source:"doe"},
+ recirculation:{supports:{flow:["low"],noise:["high"]},source:"amca201"},
+ belt_tension:{supports:{rpm:["low"],vibration:["high"],noise:["high"]},contradicts:{vibration:["normal"]},source:"doe"},
+ electrical:{supports:{current:["high"]},source:"doe"},
+ plugged_filter:{supports:{flow:["low"],pressure:["high"]},contradicts:{flow:["high"],pressure:["low"]},services:{allow:["baghouse","unknown"],prefer:["baghouse"]},source:"amca202"},
+ duct_obstruction:{supports:{flow:["low"],pressure:["high"]},contradicts:{flow:["high"],pressure:["low"]},source:"amca202"}
+};
+const RULE_MATRIX=Object.freeze(Object.fromEntries(SPECIFIC_CAUSES.map(c=>{
+ const rule=RULE_OVERRIDES[c.id]||{};
+ return [c.id,Object.freeze({ruleId:`FDA-${c.id.toUpperCase()}`,causeId:c.id,causeName:c.name,diagnosticFamily:c.problem_class,supports:rule.supports||{},contradicts:rule.contradicts||{},designs:rule.designs||{},subtypes:rule.subtypes||{},services:rule.services||{},recommendedChecks:[],reference:RULE_SOURCES[rule.source||"engineering"],status:"reviewed-baseline"})];
+})));
+window.FAN_DIAGNOSTIC_RULE_MATRIX=RULE_MATRIX;
 const CHECKS={
  plugged_filter:["Check differential pressure across the baghouse or filter.","Compare current differential pressure with the normal baseline.","Verify cleaning-system operation.","Inspect for dust buildup or plugged sections.","Check whether the loss of performance developed gradually."],
  duct_obstruction:["Inspect the fan outlet and discharge duct.","Check downstream dampers, silencers, heat exchangers, and process equipment.","Measure static pressure before and after the suspected restriction.","Compare the pressure profile with the normal baseline.","Check for recent duct or process modifications."],
@@ -284,29 +331,23 @@ function specificCauseId(c){
 }
 
 function contradictionPenalty(id,x){
+ const rule=RULE_MATRIX[id];
  let penalty=0;
- if(id==="speed_drive"&&x.rpm==="normal")penalty+=0.32;
- if(id==="speed_drive"&&x.rpm==="high")penalty+=0.42;
- if((id==="imbalance"||id==="bearing_alignment"||id==="belt_tension"||id==="structural_resonance")&&x.vibration==="normal")penalty+=0.18;
- if((id==="plugged_filter"||id==="duct_obstruction"||id==="damper")&&x.flow==="high")penalty+=0.3;
- if((id==="plugged_filter"||id==="duct_obstruction"||id==="damper")&&x.pressure==="low")penalty+=0.16;
- if(id==="damper"&&x.damper==="open")penalty+=0.2;
- if(id==="wrong_rotation"&&x.flow==="normal"&&x.pressure==="normal")penalty+=0.3;
- if(id==="motor_overload"&&x.current==="low")penalty+=0.35;
+ for(const [field,values] of Object.entries(rule?.contradicts||{})){
+   if(values.includes(x[field]))penalty+=field==="rpm"||field==="current"?0.34:0.2;
+ }
+ if(id==="wrong_rotation"&&x.flow==="normal"&&x.pressure==="normal")penalty+=0.12;
  if(id==="measurement"&&x.flow==="normal"&&x.pressure==="normal"&&x.rpm==="normal")penalty+=0.12;
  return penalty;
 }
 
 function serviceCompatibility(id,x){
+ const rule=RULE_MATRIX[id];
  let adjustment=0;
- if(id==="plugged_filter"){
-   if(x.service==="baghouse")adjustment+=0.28;
-   else if(x.service!=="unknown")adjustment-=0.6;
- }
- if(id==="blade_pitch"){
-   if(x.design==="axial")adjustment+=0.18;
-   else if(x.design==="centrifugal")adjustment-=0.5;
- }
+ if(rule?.services?.allow&&x.service!=="unknown"&&!rule.services.allow.includes(x.service))return -0.75;
+ if(rule?.designs?.allow&&x.design!=="unknown"&&!rule.designs.allow.includes(x.design))return -0.75;
+ if(rule?.services?.prefer?.includes(x.service))adjustment+=0.2;
+ if(rule?.subtypes?.prefer?.some(v=>x.subtype.includes(v)))adjustment+=0.18;
  if(x.service==="PA"){
    if(["speed_drive","blade_pitch","duct_obstruction","inlet_blockage","blade_buildup","bearing_alignment","system_effect"].includes(id))adjustment+=0.06;
  }
@@ -316,6 +357,15 @@ function serviceCompatibility(id,x){
  if(x.service==="kiln"&&["blade_buildup","blade_damage","density_process","bearing_alignment"].includes(id))adjustment+=0.05;
  if(x.service==="cooler"&&["system_effect","blade_buildup","parallel_fans","bearing_alignment"].includes(id))adjustment+=0.05;
  return adjustment;
+}
+
+function seedAllowed(c){
+ const causeId=specificCauseId(c);
+ if(!causeId)return false;
+ const rule=RULE_MATRIX[causeId];
+ if(rule?.services?.allow&&c.service!=="unknown"&&!rule.services.allow.includes(c.service))return false;
+ if(rule?.designs?.allow&&c.design!=="unknown"&&!rule.designs.allow.includes(c.design))return false;
+ return true;
 }
 
 function observationSignals(notes){
@@ -340,6 +390,10 @@ function evidenceAdjustment(id,x){
  const notes=x.notes.toLowerCase();
  const obs=observationSignals(x.notes);
  let adjustment=0;
+ const rule=RULE_MATRIX[id];
+ for(const [field,values] of Object.entries(rule?.supports||{})){
+   if(values.includes(x[field]))adjustment+=field==="rpm"||field==="vibration"?0.08:0.05;
+ }
  const restrictionPattern=x.flow==="low"&&x.pressure==="high";
   if(restrictionPattern){
    if(id==="plugged_filter")adjustment+=x.service==="baghouse"?0.14:0.07;
@@ -458,6 +512,7 @@ function rankInput(x,useLearning=true){
  const agg={};
  for(const o of stage2){
    const c=PRE[o.i];
+   if(!seedAllowed(c))continue;
    const causeId=specificCauseId(c);
    if(!causeId)continue;
    if(!agg[causeId])agg[causeId]=[];
@@ -539,6 +594,7 @@ const REGRESSION_TESTS=[
  {id:"G",input:{vibration:"high",notes:"Bearing temperature increased gradually. Vibration is higher on DE bearing."},expected:["bearing_alignment"]},
  {id:"H",input:{notes:"Problem started immediately after shutdown maintenance. Impeller was cleaned during shutdown."},expected:["imbalance","wrong_rotation"]},
  {id:"I",input:{flow:"low",notes:"Production increased about 20%. Fan is already running at full speed."},expected:["undersized"]}
+ ,{id:"J",input:{design:"axial",service:"PA",subtype:"adjustable pitch",flow:"low",pressure:"high",rpm:"low",current:"high",vibration:"high",damper:"open"},expected:["speed_drive","duct_obstruction","blade_pitch"],forbidden:["plugged_filter"]}
 ];
 function regressionInput(partial){
  return {design:"unknown",service:"unknown",subtype:"unknown",pclass:"unknown",flow:"unknown",pressure:"unknown",rpm:"unknown",current:"unknown",vibration:"unknown",noise:"unknown",damper:"unknown",notes:"",...partial};
@@ -546,14 +602,17 @@ function regressionInput(partial){
 function runRegressionTests(){
  const results=REGRESSION_TESTS.map(test=>{
    const top3=rankInput(regressionInput(test.input),false).ranked.slice(0,3).map(c=>c.id);
-   return {id:test.id,pass:test.expected.some(id=>top3.includes(id)),top3};
+   const forbidden=(test.forbidden||[]).some(id=>top3.includes(id));
+   return {id:test.id,pass:test.expected.some(id=>top3.includes(id))&&!forbidden,top3};
  });
  console.table(results);
  return results;
 }
 window.runFanRegressionTests=runRegressionTests;
 window.FAN_REGRESSION_RESULTS=runRegressionTests();
+window.FAN_SEED_AUDIT={total:SEEDS.length,admitted:SEEDS.filter(seedAllowed).length,quarantined:SEEDS.filter(c=>!seedAllowed(c)).length,allRulesPresent:SPECIFIC_CAUSES.every(c=>RULE_MATRIX[c.id])};
 document.documentElement.dataset.regression=JSON.stringify(window.FAN_REGRESSION_RESULTS);
+document.documentElement.dataset.seedAudit=JSON.stringify(window.FAN_SEED_AUDIT);
 
 $("analyze").onclick=()=>analyze(true);
 $("confirm").onclick=confirmLearn;
